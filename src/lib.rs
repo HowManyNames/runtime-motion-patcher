@@ -97,7 +97,7 @@ fn install_for_all_costumes(path: PathBuf) {
 
     for name in defaults.iter() {
         let entry = parent.join(name);
-        let mlist_path = entry.path().join("motion_list.bin");
+        let mlist_path = entry.join("motion_list.bin");
         let hash = Hash40::new(mlist_path.to_str().unwrap().strip_prefix("mods:/").unwrap());
 
         map.insert(hash, path.clone());
