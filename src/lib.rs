@@ -93,12 +93,48 @@ fn install_for_all_costumes(path: PathBuf) {
 
     let mut data: Option<Arc<MList>> = None;
 
+    let defaults = ["c00", "c01", "c02", "c03", "c04", "c05", "c06", "c07"];
+
+    for name in defaults.iter() {
+        let entry = parent.join(name);
+        let mlist_path = entry.path().join("motion_list.bin");
+        let hash = Hash40::new(mlist_path.to_str().unwrap().strip_prefix("mods:/").unwrap());
+
+        map.insert(hash, path.clone());
+        unsafe {
+            arcrop_register_callback(hash, 5 * 1024 * 1024, callback);
+
+            if USE_CACHE {
+                let data = if let Some(data) = data.as_ref() {
+                    data.clone()
+                } else {
+                    let motion_list = motion_lib::open(
+                        Path::new("arc:/")
+                            .join(parent.strip_prefix("mods:/").unwrap())
+                            .join("c00/motion_list.bin"),
+                    )
+                    .unwrap();
+
+                    let arc = Arc::new(motion_list);
+                    data = Some(arc.clone());
+                    arc
+                };
+
+                data_map.insert(hash, data);
+            }
+        }
+    }
+
     for entry in WalkDir::new(parent).min_depth(1).max_depth(1) {
         let Ok(entry) = entry else {
             continue;
         };
 
         if !entry.file_type().is_dir() {
+            continue;
+        }
+
+        if defaults.contains(&entry.file_name().to_str().unwrap()) {
             continue;
         }
 
@@ -227,20 +263,10 @@ pub fn run(cache: bool) {
         USE_CACHE = cache;
     }
 
-    // let backup = unsafe {
-    //     let current = skyline::nn::os::GetCurrentThread();
-    //     let backup = skyline::nn::os::GetThreadPriority(current);
-    //     skyline::nn::os::ChangeThreadPriority(current, 0);
-    //     backup
-    // };
     check_only_body("mods:/assist");
     check_only_body("mods:/boss");
     check_only_body("mods:/item");
     check_all("mods:/fighter");
-    // unsafe {
-    //     let current = skyline::nn::os::GetCurrentThread();
-    //     skyline::nn::os::ChangeThreadPriority(current, backup);
-    // }
 }
 
 pub fn install(cache: bool) {
